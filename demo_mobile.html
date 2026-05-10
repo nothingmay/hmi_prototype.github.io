@@ -564,14 +564,11 @@
 
           <!-- Bottom dock -->
           <div class="dock">
-            <button class="primary-action" id="primaryBtn">
-              <span style="font-size:22px">📞</span>
-              <span>Call Operator<small id="primarySub">Talk to a human now</small></span>
-            </button>
+            <button class="primary-action" id="primaryBtn" type="button"></button>
             <div class="sec-row">
-              <button class="sec-btn pull"><div class="ico">🚶</div><div>Request Exit</div><small>Ask to leave</small></button>
-              <button class="sec-btn"><div class="ico">✅</div><div>Confirm Exit</div><small>When team is here</small></button>
-              <button class="sec-btn sos"><div class="ico">🆘</div><div>SOS</div><small>Highest priority</small></button>
+              <button type="button" class="sec-btn pull" id="dockPull"><div class="ico">🚶</div><div>Request Exit</div><small>Ask to leave</small></button>
+              <button type="button" class="sec-btn" id="dockConfirm"><div class="ico">✅</div><div>Confirm Exit</div><small>When team is here</small></button>
+              <button type="button" class="sec-btn sos" id="dockSos"><div class="ico">🆘</div><div>SOS</div><small>Highest priority</small></button>
             </div>
           </div>
         </div><!-- /.app -->
@@ -840,6 +837,21 @@ const FLOWS = {
       {label:"Unlock", h:"Unlocking Highlighted Door", p:"Left door is unlocking — use that side only.",   anim:"door",    ms:1600},
       {label:"Exit",   h:"You May Exit Now",           p:"Take your belongings and follow the on-site team.", anim:"success", ms:1200, success:true}
     ]
+  },
+  call_support:{
+    title:"Calling Operator", icon:"📞", iconTheme:"theme-blue",
+    stages:[
+      {label:"Dial",     h:"Dialing Operator",      p:"Establishing voice link with the operations center.", anim:"ring",      ms:2200},
+      {label:"Connected", h:"Operator Connected",   p:"You're now speaking with a live operator. Stay calm and describe your situation.", anim:"connected", ms:2400, success:true}
+    ]
+  },
+  request_exit:{
+    title:"Exit Request", icon:"🚶", iconTheme:"theme-med",
+    stages:[
+      {label:"Submit", h:"Request Submitted",   p:"Your exit request was sent to the operator.", anim:"spinner", ms:1800},
+      {label:"Review", h:"Operator Reviewing",   p:"Checking surroundings and door safety.",      anim:"scan",    ms:2200},
+      {label:"Status", h:"Request Logged",       p:"You'll see further guidance here when a decision is made. Stay seated unless told otherwise.", anim:"queue", ms:1600, success:true}
+    ]
   }
 };
 
@@ -1034,6 +1046,35 @@ function manualTrigger(key){
   if(s.flowKey) setTimeout(()=>runFlow(s.flowKey), 400);
 }
 
+/* Dock (phone) — same affordances as cabin baseline / scenarios */
+function onDockPrimary(){
+  dismissModal();
+  const act = $("primaryBtn").dataset.action;
+  if(act==="call") runFlow("call_support");
+  else if(act==="emergency") runFlow("call_support");
+  else if(act==="confirm_exit") runFlow("door_open");
+}
+function onDockPull(){
+  dismissModal();
+  runFlow("request_exit");
+}
+function onDockConfirm(){
+  dismissModal();
+  if(currentScenario==="safe_exit") runFlow("door_open");
+  else showToast("Please wait until on-site support confirms it is safe to exit.");
+}
+function onDockSos(){
+  dismissModal();
+  runFlow("call_support");
+}
+
+function bindDockActions(){
+  $("primaryBtn").addEventListener("click", onDockPrimary);
+  $("dockPull").addEventListener("click", onDockPull);
+  $("dockConfirm").addEventListener("click", onDockConfirm);
+  $("dockSos").addEventListener("click", onDockSos);
+}
+
 /* ============================================================
    PHONE FRAME SCALING
    ============================================================ */
@@ -1062,6 +1103,7 @@ setInterval(tick,1000); tick();
    ============================================================ */
 window.addEventListener("load", ()=>{
   scalePhone();
+  bindDockActions();
   applyScenario("reset");
   highlightBtn("reset");
 });
