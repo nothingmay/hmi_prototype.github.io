@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Robotaxi HMI · Demo Workspace</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Arial, sans-serif;
+      background: #dce8f5;
+      color: #102539;
+      -webkit-font-smoothing: antialiased;
+    }
+    .shell {
+      width: 100%;
+      height: 100%;
+      padding: 12px;
+      display: grid;
+      grid-template-rows: 52px 1fr 88px;
+      gap: 12px;
+    }
+    .topbar {
+      border: 1px solid #bfd2e5;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.96);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      box-shadow: 0 2px 6px rgba(16, 37, 57, 0.06);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: #0f2438;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+    .title { font-size: 15px; font-weight: 900; }
+    .sub { font-size: 12px; color: #5f7a93; font-weight: 600; }
+    .live {
+      margin-left: auto;
+      border: 1px solid #9ec2e4;
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 11px;
+      color: #2a5e94;
+      background: #e9f3fe;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 800;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #0d7a4a; animation: blink 1.4s ease-in-out infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .stage {
+      min-height: 0;
+      border: 1px solid #bfd2e5;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #f5f9fd;
+      box-shadow: 0 4px 14px rgba(16, 37, 57, 0.08);
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-hd {
+      height: 36px;
+      flex-shrink: 0;
+      border-bottom: 1px solid #bfd2e5;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #5f7a93;
+      background: rgba(255,255,255,0.85);
+    }
+    .panel-hd .l { color: #102539; }
+    .viewport {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      overflow: hidden;
+      background: #dce8f5;
+    }
+    .scale-wrap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: top left;
+    }
+    iframe { border: none; display: block; }
+
+    .scenario-strip {
+      border: 1px solid #bfd2e5;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.96);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      overflow-x: auto;
+      box-shadow: 0 2px 6px rgba(16, 37, 57, 0.06);
+    }
+    .strip-label {
+      flex-shrink: 0;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      color: #6b849c;
+      text-transform: uppercase;
+      margin-right: 4px;
+    }
+    .s-btn {
+      flex-shrink: 0;
+      min-height: 56px;
+      padding: 8px 14px 8px 16px;
+      border-radius: 9px;
+      border: 1.5px solid #bcd1e5;
+      background: #f3f8fe;
+      color: #22384d;
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.2;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+    }
+    .s-btn small {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      color: #6b849c;
+      margin-top: 3px;
+      letter-spacing: 0;
+    }
+    .s-btn:hover {
+      background: #e8f2fc;
+      border-color: #8eb5da;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(16, 37, 57, 0.08);
+    }
+    .s-btn.active {
+      background: #d8ebff;
+      border-color: #5f9dd9;
+      color: #124e88;
+    }
+    .s-btn:focus-visible {
+      outline: 3px solid rgba(22, 104, 212, 0.25);
+      outline-offset: 2px;
+    }
+    .s-btn::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: #bcd1e5;
+    }
+    .s-btn.risk-med::before  { background: #b85c00; }
+    .s-btn.risk-high::before { background: #c0202e; }
+    .s-btn.risk-low::before  { background: #0a7a4a; }
+
+    .back-home {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 10px;
+      border: 1px solid #bfd2e5;
+      background: rgba(255,255,255,0.9);
+      color: #36506b;
+      font-size: 12px;
+      font-weight: 800;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .back-home:hover {
+      background: #e1ecfa;
+      border-color: #7eb0ec;
+      color: #1668d4;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <a class="back-home" href="index.html">← Home</a>
+      <div class="badge">DEMO</div>
+      <div>
+        <div class="title">Robotaxi HMI · Cabin Display</div>
+        <div class="sub">In-cabin safety screen · scenario-driven preview</div>
+      </div>
+      <div class="live"><div class="dot"></div>Live Sync</div>
+    </div>
+
+    <section class="stage">
+      <div class="panel-hd">
+        <span class="l">Cabin Display</span>
+        <span>1280 × 720</span>
+      </div>
+      <div class="viewport" id="cabinVP">
+        <div class="scale-wrap" id="cabinWrap">
+          <iframe src="./cabin_ui_en_gui_improved.html?v=2" width="1280" height="720"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <div class="scenario-strip">
+      <div class="strip-label">Scenarios</div>
+      <button class="s-btn risk-med"  id="btn-ext_signal" onclick="triggerScenario('ext_signal')">🚦 Signal Anomaly<small>Hold in traffic · Med risk</small></button>
+      <button class="s-btn risk-med"  id="btn-ext_env"    onclick="triggerScenario('ext_env')">🌫️ Severe Weather<small>Low visibility hold · Med risk</small></button>
+      <button class="s-btn risk-high" id="btn-ext_comm"   onclick="triggerScenario('ext_comm')">📵 Network Lost<small>Local safe mode · High risk</small></button>
+      <button class="s-btn risk-high" id="btn-int_hw"     onclick="triggerScenario('int_hw')">🔧 Hardware Fault<small>Field team coming · High risk</small></button>
+      <button class="s-btn risk-low"  id="btn-int_percep" onclick="triggerScenario('int_percep')">👁️ Sensor Recalibrate<small>Brief pause · Low risk</small></button>
+      <button class="s-btn risk-high" id="btn-int_algo"   onclick="triggerScenario('int_algo')">🧠 Decision Required<small>Talk to operator · High risk</small></button>
+      <button class="s-btn risk-low"  id="btn-safe_exit"  onclick="triggerScenario('safe_exit')">🚪 Cautious Exit<small>Support on-site · Verify before exit</small></button>
+      <button class="s-btn"           id="btn-reset"      onclick="triggerScenario('reset')">🔄 Reset<small>Initial baseline</small></button>
+    </div>
+  </div>
+
+  <script>
+    const SK = "robotaxi_shared_state_en_v1";
+    const BK = "robotaxi_shared_bus_en_v1";
+    const CH = "robotaxi_hmi_sync_en_v1";
+
+    const SCENARIO_KEYS = ["ext_signal","ext_env","ext_comm","int_hw","int_percep","int_algo","safe_exit","reset"];
+
+    let bc;
+    let lastBusTs = 0;
+    let current = "reset";
+    try { bc = new BroadcastChannel(CH); } catch (e) {}
+
+    function fit() {
+      const vp = document.getElementById("cabinVP");
+      const wrap = document.getElementById("cabinWrap");
+      if (!vp || !wrap) return;
+      const w = 1280, h = 720;
+      const scale = Math.min(vp.clientWidth / w, vp.clientHeight / h);
+      const x = (vp.clientWidth - w * scale) / 2;
+      const y = (vp.clientHeight - h * scale) / 2;
+      wrap.style.transform = `translate(${x}px,${y}px) scale(${scale})`;
+    }
+    function highlight(key) {
+      document.querySelectorAll(".s-btn").forEach((b) => b.classList.remove("active"));
+      const active = document.getElementById("btn-" + key);
+      if (active) active.classList.add("active");
+    }
+    function emitState(key, src) {
+      const state = { causeType: key, lastUpdate: Date.now() };
+      const msg = { type: "state_update", src, state, ts: Date.now() };
+      try { localStorage.setItem(SK, JSON.stringify(state)); } catch (e) {}
+      try { localStorage.setItem(BK, JSON.stringify(msg)); } catch (e) {}
+      try { if (bc) bc.postMessage(msg); } catch (e) {}
+    }
+    function triggerScenario(key) {
+      if (!SCENARIO_KEYS.includes(key)) return;
+      current = key;
+      highlight(key);
+      emitState(key, "workspace");
+    }
+    function handleBus(msg) {
+      if (!msg || msg.type !== "state_update" || !msg.state) return;
+      if ((msg.ts || 0) <= lastBusTs) return;
+      lastBusTs = msg.ts || Date.now();
+      const key = msg.state.causeType || "reset";
+      if (!SCENARIO_KEYS.includes(key)) return;
+      current = key;
+      highlight(key);
+    }
+
+    if (bc) bc.onmessage = (e) => handleBus(e.data || {});
+    setInterval(() => {
+      try {
+        const raw = localStorage.getItem(BK);
+        if (raw) handleBus(JSON.parse(raw));
+      } catch (e) {}
+    }, 800);
+    window.addEventListener("resize", () => requestAnimationFrame(fit));
+
+    requestAnimationFrame(fit);
+    setTimeout(fit, 100);
+    setTimeout(() => { triggerScenario("reset"); }, 400);
+  </script>
+</body>
+</html>
