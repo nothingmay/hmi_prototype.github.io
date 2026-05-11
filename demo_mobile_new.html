@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Robotaxi HMI · Passenger Mobile (Demo)</title>
+  <style>
+    :root {
+      --bg: #f1f5fa;
+      --panel: #ffffff;
+      --line: #d4e0ed;
+      --text: #0f2438;
+      --text-2: #36506b;
+      --muted: #6a8299;
+      --low: #0a7a4a;
+      --med: #b85c00;
+      --high: #c0202e;
+      --blue: #1668d4;
+      --safe: #0b8a72;
+      --shadow-md: 0 4px 14px rgba(15, 36, 56, 0.08), 0 1px 3px rgba(15, 36, 56, 0.04);
+      --shadow-lg: 0 10px 28px rgba(15, 36, 56, 0.14), 0 2px 6px rgba(15, 36, 56, 0.06);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(22, 104, 212, 0.08), transparent 35%),
+        radial-gradient(circle at 100% 100%, rgba(11, 138, 114, 0.06), transparent 35%),
+        #dce8f5;
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============ DECK ============ */
+    .deck {
+      width: 100%; height: 100%;
+      padding: 12px;
+      display: grid;
+      grid-template-rows: 56px 1fr 96px;
+      gap: 12px;
+    }
+    .deck-topbar {
+      border: 1px solid #bfd2e5;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.95);
+      display: flex; align-items: center;
+      padding: 0 18px; gap: 14px;
+      box-shadow: 0 2px 8px rgba(16, 37, 57, 0.08);
+    }
+    .deck-badge {
+      display: inline-flex; align-items: center;
+      padding: 4px 10px; border-radius: 6px;
+      background: #0f2438; color: #fff;
+      font-size: 11px; font-weight: 800; letter-spacing: 0.04em;
+    }
+    .deck-title { font-size: 16px; font-weight: 900; color: var(--text); }
+    .deck-sub { font-size: 12px; color: #5f7a93; font-weight: 600; }
+    .deck-live {
+      margin-left: auto;
+      border: 1px solid #9ec2e4;
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-size: 11px; color: #2a5e94;
+      background: #e9f3fe;
+      display: flex; align-items: center; gap: 6px;
+      font-weight: 800;
+    }
+    .deck-dot { width: 8px; height: 8px; border-radius: 50%; background: #0d7a4a; animation: deck-blink 1.4s ease-in-out infinite; }
+    @keyframes deck-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .stage {
+      min-height: 0;
+      border: 1px solid #bfd2e5;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #f5f9fd;
+      box-shadow: 0 4px 16px rgba(16, 37, 57, 0.08);
+      display: flex; flex-direction: column;
+    }
+    .stage-hd {
+      height: 40px; flex-shrink: 0;
+      border-bottom: 1px solid #bfd2e5;
+      padding: 0 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 11px; font-weight: 900;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: #5f7a93;
+      background: rgba(255,255,255,0.85);
+    }
+    .stage-hd .l { color: var(--text); }
+    .stage-vp {
+      position: relative;
+      flex: 1; width: 100%;
+      overflow: hidden;
+      background: #dce8f5;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .phone-frame {
+      width: 390px; height: 844px;
+      border-radius: 36px;
+      overflow: hidden;
+      background: var(--bg);
+      box-shadow: 0 0 0 8px #1a2535, 0 16px 48px rgba(0,0,0,0.32);
+      flex-shrink: 0;
+      position: relative;
+      transform: translateZ(0);
+      transform-origin: center center;
+    }
+    .phone-frame .app {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px 12px 18px;
+    }
+
+    .scenario-strip {
+      border: 1px solid #bfd2e5;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.95);
+      display: flex; align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      overflow-x: auto;
+      box-shadow: 0 2px 8px rgba(16, 37, 57, 0.06);
+    }
+    .strip-label {
+      flex-shrink: 0;
+      font-size: 10px; font-weight: 900;
+      letter-spacing: 0.1em;
+      color: #6b849c;
+      text-transform: uppercase;
+      margin-right: 4px;
+    }
+    .s-btn {
+      flex-shrink: 0;
+      min-height: 60px;
+      padding: 8px 14px 8px 16px;
+      border-radius: 10px;
+      border: 1.5px solid #bcd1e5;
+      background: #f3f8fe;
+      color: #22384d;
+      font-size: 13px; font-weight: 900; line-height: 1.2;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+    }
+    .s-btn small {
+      display: block;
+      font-size: 10px; font-weight: 700;
+      color: #6b849c;
+      margin-top: 3px; letter-spacing: 0;
+    }
+    .s-btn:hover {
+      background: #e8f2fc;
+      border-color: #8eb5da;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(16, 37, 57, 0.08);
+    }
+    .s-btn.active {
+      background: #d8ebff;
+      border-color: #5f9dd9;
+      color: #124e88;
+    }
+    .s-btn::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: #bcd1e5;
+    }
+    .s-btn.risk-med::before  { background: var(--med); }
+    .s-btn.risk-high::before { background: var(--high); }
+    .s-btn.risk-low::before  { background: var(--low); }
+
+    /* ============ APP (phone content) ============ */
+    .topstrip {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 12px; font-weight: 700;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .topstrip .id { display: inline-flex; gap: 6px; align-items: center; }
+    .topstrip .badge {
+      padding: 2px 7px; border-radius: 5px;
+      background: #0f2438; color: #fff;
+      font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
+    }
+    .topstrip .clock {
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      font-size: 13px; font-weight: 900;
+    }
+
+    .hero {
+      border-radius: 16px;
+      padding: 20px 20px 22px;
+      color: #fff;
+      display: flex; flex-direction: column; gap: 12px;
+      background: linear-gradient(140deg, #2d5a8c, #4a7fb5);
+      box-shadow: var(--shadow-lg);
+      position: relative; overflow: hidden;
+    }
+    .hero.theme-high { background: linear-gradient(140deg, #8a2730, #b34352); }
+    .hero.theme-med  { background: linear-gradient(140deg, #8a5a14, #c08332); }
+    .hero.theme-safe { background: linear-gradient(140deg, #1d6757, #34917d); }
+    .hero.theme-idle { background: linear-gradient(140deg, #3d5168, #607a96); }
+    .hero::before {
+      content: ""; position: absolute; inset: 0;
+      background-image:
+        radial-gradient(circle at 92% 6%, rgba(255,255,255,0.10), transparent 50%),
+        radial-gradient(circle at 0% 100%, rgba(0,0,0,0.18), transparent 60%);
+      pointer-events: none;
+    }
+    .hero > * { position: relative; }
+    .hero-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .hero-tag {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.32);
+      background: rgba(255,255,255,0.14);
+      font-size: 10px; font-weight: 800;
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .risk-chip {
+      display: inline-flex; align-items: center;
+      gap: 6px; padding: 4px 11px 4px 4px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.16);
+      border: 1px solid rgba(255,255,255,0.34);
+      font-size: 10px; font-weight: 900;
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .risk-chip .dot {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #fff;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 900;
+      color: var(--text);
+    }
+    .risk-chip.high .dot { background: #ffd7db; color: #7c1219; }
+    .risk-chip.med  .dot { background: #ffe6c2; color: #6b3400; }
+    .risk-chip.low  .dot { background: #cdeed9; color: #0a5a37; }
+    .risk-chip.high { animation: risk-pulse 1.4s ease-in-out infinite; }
+    @keyframes risk-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.55); }
+      50%      { box-shadow: 0 0 0 7px rgba(255,255,255,0); }
+    }
+    .hero-mid { display: flex; gap: 12px; align-items: center; }
+    .hero-icon { font-size: 48px; line-height: 1; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.25)); flex-shrink: 0; }
+    .hero-title { font-size: 24px; font-weight: 900; line-height: 1.15; letter-spacing: -0.01em; }
+    .hero-text { font-size: 14px; line-height: 1.5; opacity: 0.96; }
+
+    .caution {
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.20);
+      border: 1px solid rgba(255,255,255,0.28);
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .caution-ico { font-size: 22px; line-height: 1; flex-shrink: 0; }
+    .caution-h { font-size: 13px; font-weight: 900; margin-bottom: 3px; }
+    .caution-p { font-size: 12px; line-height: 1.5; opacity: 0.94; }
+
+    /* CRITICAL CAUTION — life-safety warning for high-risk scenarios */
+    .caution.critical {
+      background: #ffd000;
+      border: 2.5px solid #1a1a1a;
+      color: #1a1a1a;
+      padding: 14px 14px 14px 18px;
+      position: relative;
+      box-shadow:
+        0 0 0 0 rgba(255, 208, 0, 0.7),
+        0 4px 14px rgba(0,0,0,0.3);
+      animation: critical-pulse-mob 1.8s ease-in-out infinite;
+      overflow: hidden;
+    }
+    .caution.critical::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 9px;
+      background-image: repeating-linear-gradient(
+        45deg,
+        #1a1a1a 0 7px,
+        #ffd000 7px 14px
+      );
+    }
+    .caution.critical .caution-ico {
+      font-size: 28px;
+      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+      margin-left: 4px;
+    }
+    .caution.critical .caution-h {
+      font-size: 15px;
+      font-weight: 900;
+      color: #1a1a1a;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .caution.critical .caution-p {
+      font-size: 12px;
+      color: #1a1a1a;
+      opacity: 1;
+      font-weight: 600;
+    }
+    @keyframes critical-pulse-mob {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 208, 0, 0.7), 0 4px 14px rgba(0,0,0,0.3); }
+      50%      { box-shadow: 0 0 0 8px rgba(255, 208, 0, 0), 0 4px 14px rgba(0,0,0,0.3); }
+    }
+
+    .actions {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .btn {
+      min-height: 58px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: var(--shadow-md);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 15px; font-weight: 900;
+      color: var(--text);
+      display: flex; align-items: center; gap: 12px;
+      text-align: left;
+      transition: transform 0.12s, box-shadow 0.15s;
+      width: 100%;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn .ico { font-size: 22px; line-height: 1; flex-shrink: 0; }
+    .btn .txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .btn small { font-size: 11px; font-weight: 700; color: var(--muted); }
+    .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .btn.primary small { color: rgba(255,255,255,0.85); }
+    .btn.danger { background: var(--high); border-color: var(--high); color: #fff; }
+    .btn.danger small { color: rgba(255,255,255,0.85); }
+    .btn.success { background: var(--safe); border-color: var(--safe); color: #fff; }
+    .btn.success small { color: rgba(255,255,255,0.85); }
+    .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+    /* ============ FLOW PANEL (scoped to phone-frame) ============ */
+    .flow-mask {
+      position: absolute; inset: 0;
+      background: rgba(15, 36, 56, 0.65);
+      display: none;
+      align-items: stretch;
+      justify-content: center;
+      z-index: 50;
+      backdrop-filter: blur(2px);
+    }
+    .flow-mask.show { display: flex; }
+    .flow {
+      width: 100%;
+      background: #fff;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .flow-hd {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0;
+    }
+    .flow-hd-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: #e9f3fe;
+      color: var(--blue);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .flow-hd-icon.theme-high { background: #fce6e8; color: var(--high); }
+    .flow-hd-icon.theme-med  { background: #fdf0db; color: var(--med); }
+    .flow-hd-icon.theme-safe { background: #e0f5e9; color: var(--safe); }
+    .flow-hd-title { font-size: 15px; font-weight: 900; }
+    .flow-hd-sub { font-size: 11px; font-weight: 700; color: var(--muted); margin-top: 1px; }
+    .flow-hd-close {
+      margin-left: auto;
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--muted);
+      display: inline-flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .stage-track {
+      padding: 10px 14px;
+      display: flex; align-items: center;
+      border-bottom: 1px solid var(--line);
+      background: #f9fbfd;
+      flex-shrink: 0;
+    }
+    .stage-dot {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .stage-dot .num {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: #e3ecf5;
+      color: var(--muted);
+      font-size: 10px; font-weight: 900;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: all 0.25s;
+    }
+    .stage-dot .lab {
+      font-size: 9px; font-weight: 900;
+      color: var(--muted);
+      letter-spacing: 0.04em; text-transform: uppercase;
+      transition: color 0.25s;
+    }
+    .stage-dot.active .num { background: var(--blue); color: #fff; box-shadow: 0 0 0 3px rgba(22, 104, 212, 0.18); }
+    .stage-dot.active .lab { color: var(--blue); }
+    .stage-dot.done .num { background: var(--safe); color: #fff; }
+    .stage-dot.done .lab { color: var(--safe); }
+    .stage-dot.done .num::after { content: "✓"; }
+    .stage-dot.done .num > span { display: none; }
+    .stage-connector {
+      flex: 1;
+      height: 2px;
+      background: #e3ecf5;
+      margin: 0 6px;
+      border-radius: 2px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stage-connector .fill {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      background: var(--safe);
+      width: 0;
+      transition: width 0.4s ease;
+    }
+
+    .stage-bar {
+      height: 3px;
+      background: #e3ecf5;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .stage-bar .fill {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      background: linear-gradient(90deg, var(--blue), #4ba0ee);
+      width: 0;
+      transition: width 0.1s linear;
+    }
+    .stage-bar.success .fill { background: var(--safe); }
+    .stage-bar.indeterminate .fill {
+      width: 30% !important;
+      animation: indet 1.6s ease-in-out infinite;
+      background: linear-gradient(90deg, transparent, var(--blue), transparent);
+    }
+    @keyframes indet {
+      0%   { left: -30%; }
+      100% { left: 100%; }
+    }
+
+    .stage-body {
+      padding: 18px 16px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .stage-anim {
+      width: 88px; height: 88px;
+      border-radius: 14px;
+      background: #f3f8fe;
+      border: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stage-anim.ring::after {
+      content: "";
+      position: absolute; inset: 0;
+      border-radius: 14px;
+      border: 3px solid rgba(22, 104, 212, 0.4);
+      animation: ringPulse 1.3s ease-out infinite;
+    }
+    @keyframes ringPulse {
+      0%   { transform: scale(0.8); opacity: 0.9; }
+      100% { transform: scale(1.15); opacity: 0; }
+    }
+    .stage-anim.connected .ico-anim { animation: wave 1s ease-in-out infinite; }
+    @keyframes wave {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.12); }
+    }
+    .stage-anim.scan::before {
+      content: "";
+      position: absolute; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--blue), transparent);
+      animation: scanLine 1.6s ease-in-out infinite;
+    }
+    @keyframes scanLine {
+      0%   { top: 10%; }
+      100% { top: 90%; }
+    }
+    .stage-anim.success { background: #e0f5e9; border-color: var(--safe); color: var(--safe); }
+    .stage-anim.spinner .ico-anim { animation: spin 1.2s linear infinite; }
+    @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+    .stage-info { width: 100%; }
+    .stage-label {
+      font-size: 10px; font-weight: 900;
+      color: var(--blue);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .stage-h { font-size: 17px; font-weight: 900; line-height: 1.2; margin-bottom: 5px; }
+    .stage-p { font-size: 12px; line-height: 1.5; color: var(--text-2); }
+    .stage-p b { color: var(--text); }
+
+    .feed {
+      padding: 10px 16px 14px;
+      border-top: 1px solid var(--line);
+      background: #fafcfe;
+      flex: 1;
+      overflow-y: auto;
+      min-height: 80px;
+    }
+    .feed-h {
+      font-size: 10px; font-weight: 900;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .feed-h .pulse {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--safe);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.4; }
+    }
+    .feed-item {
+      display: flex; gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px dashed #e3ecf5;
+      animation: feedIn 0.4s ease-out;
+    }
+    .feed-item:last-child { border-bottom: none; }
+    @keyframes feedIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .feed-tag {
+      font-size: 9px; font-weight: 800;
+      color: var(--muted);
+      flex-shrink: 0;
+      min-width: 78px;
+      padding-top: 1px;
+    }
+    .feed-body { flex: 1; min-width: 0; text-align: left; }
+    .feed-body .h { font-size: 11px; font-weight: 900; margin-bottom: 1px; }
+    .feed-body .p { font-size: 10px; color: var(--text-2); line-height: 1.4; }
+
+    .flow-ft {
+      padding: 10px 14px 14px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .flow-ft .btn { min-height: 42px; padding: 8px 12px; font-size: 13px; box-shadow: none; flex: 1; }
+    .flow-ft .btn .ico { font-size: 16px; }
+
+    /* Modals scoped to phone-frame */
+    .mask {
+      position: absolute; inset: 0;
+      background: rgba(15, 36, 56, 0.55);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 60;
+      backdrop-filter: blur(2px);
+    }
+    .mask.show { display: flex; }
+    .modal {
+      width: 100%;
+      max-height: 88%;
+      background: #fff;
+      border-radius: 18px 18px 0 0;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .modal-hd { padding: 16px 18px 10px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+    .modal-hd .t { font-size: 16px; font-weight: 900; }
+    .modal-hd .s { font-size: 12px; font-weight: 700; color: var(--muted); margin-top: 3px; }
+    .modal-bd { padding: 14px 18px; font-size: 13px; line-height: 1.55; color: var(--text-2); overflow-y: auto; }
+    .modal-bd ul { margin: 8px 0 0 16px; }
+    .modal-bd li { margin-bottom: 5px; }
+    .modal-bd strong { color: var(--text); }
+    .modal-ft { padding: 10px 18px 16px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+    .modal-ft .btn { min-height: 44px; padding: 8px 14px; font-size: 13px; box-shadow: none; }
+
+    .emerg-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+    .emerg-btn {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: left;
+      transition: all 0.15s;
+      width: 100%;
+    }
+    .emerg-btn:active { background: #f3f8fe; }
+    .emerg-btn .n {
+      width: 44px; height: 34px;
+      border-radius: 7px;
+      background: var(--high);
+      color: #fff;
+      font-size: 14px; font-weight: 900;
+      display: inline-flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .emerg-btn.ops .n { background: var(--blue); }
+    .emerg-btn .t { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .emerg-btn .t .h { font-size: 13px; font-weight: 900; color: var(--text); }
+    .emerg-btn .t .p { font-size: 10px; color: var(--muted); font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<div class="deck">
+  <div class="deck-topbar">
+    <div class="deck-badge">DEMO</div>
+    <div>
+      <div class="deck-title">Robotaxi HMI · Passenger Mobile</div>
+      <div class="deck-sub">Companion mobile app · scenario-driven preview</div>
+    </div>
+    <div class="deck-live"><div class="deck-dot"></div>Live Sync</div>
+  </div>
+
+  <section class="stage">
+    <div class="stage-hd">
+      <span class="l">Passenger Mobile</span>
+      <span>390 × 844</span>
+    </div>
+    <div class="stage-vp" id="stageVP">
+      <div class="phone-frame" id="phoneFrame">
+        <div class="app">
+
+          <div class="topstrip">
+            <div class="id">
+              <span class="badge">VEHICLE</span>
+              <span>RT-04821 · #A12</span>
+            </div>
+            <div class="clock" id="clock">--:--</div>
+          </div>
+
+          <section class="hero theme-idle" id="hero">
+            <div class="hero-row">
+              <div class="hero-tag" id="heroTag">Standby</div>
+              <div class="risk-chip" id="riskChip"><span class="dot" id="riskDot">—</span><span id="riskText">Idle</span></div>
+            </div>
+            <div class="hero-mid">
+              <div class="hero-icon" id="heroIcon">🛡️</div>
+              <div class="hero-title" id="heroTitle">All Systems Normal</div>
+            </div>
+            <div class="hero-text" id="heroText">Pick a scenario below to preview the rider mobile.</div>
+            <div class="caution" id="caution" style="display:none;">
+              <div class="caution-ico" id="cautionIcon">⚠️</div>
+              <div>
+                <div class="caution-h" id="cautionH"></div>
+                <div class="caution-p" id="cautionP"></div>
+              </div>
+            </div>
+          </section>
+
+          <div class="actions">
+            <button class="btn primary" onclick="startFlow('call_operator')">
+              <span class="ico">📞</span>
+              <span class="txt"><span>Call Operator</span><small>Talk to a live agent</small></span>
+            </button>
+            <button class="btn danger" onclick="openEmergencyPicker()">
+              <span class="ico">🚨</span>
+              <span class="txt"><span>Emergency Numbers</span><small>911 · Operations · Roadside</small></span>
+            </button>
+            <button class="btn" id="btnExit" onclick="confirmExit()" disabled>
+              <span class="ico">🚪</span>
+              <span class="txt"><span>Request to Exit</span><small>Review checklist first</small></span>
+            </button>
+          </div>
+
+          <!-- FLOW PANEL -->
+          <div class="flow-mask" id="flowMask">
+            <div class="flow">
+              <div class="flow-hd">
+                <div class="flow-hd-icon" id="flowIcon">📞</div>
+                <div style="min-width:0; flex:1;">
+                  <div class="flow-hd-title" id="flowTitle">—</div>
+                  <div class="flow-hd-sub" id="flowSub">—</div>
+                </div>
+                <button class="flow-hd-close" id="flowClose" onclick="closeFlow()" title="Close">✕</button>
+              </div>
+              <div class="stage-track" id="stageTrack"></div>
+              <div class="stage-bar" id="stageBar"><div class="fill" id="stageBarFill"></div></div>
+              <div class="stage-body">
+                <div class="stage-anim" id="stageAnim"><span class="ico-anim" id="stageAnimIco">📞</span></div>
+                <div class="stage-info">
+                  <div class="stage-label" id="stageLabel">Stage 1</div>
+                  <div class="stage-h" id="stageH">—</div>
+                  <div class="stage-p" id="stageP">—</div>
+                </div>
+              </div>
+              <div class="feed" id="feed" style="display:none;">
+                <div class="feed-h"><div class="pulse"></div><span>Live Activity</span></div>
+                <div id="feedList"></div>
+              </div>
+              <div class="flow-ft" id="flowFt"></div>
+            </div>
+          </div>
+
+          <!-- Exit checklist -->
+          <div class="mask" id="mask">
+            <div class="modal">
+              <div class="modal-hd">
+                <div class="t">Before You Exit — Please Read</div>
+                <div class="s">Exiting is a high-risk action. Take a moment to check.</div>
+              </div>
+              <div class="modal-bd">
+                <strong>Even when the door is unlocked, the surroundings can still be unsafe.</strong> Before stepping out, please:
+                <ul>
+                  <li>Look for moving traffic on your exit side — including bikes and scooters.</li>
+                  <li>Confirm an on-site team member has waved you out, if one is expected.</li>
+                  <li>Hold the door, step out slowly, and watch your footing.</li>
+                  <li>If anything feels uncertain, stay inside and call the operator.</li>
+                </ul>
+              </div>
+              <div class="modal-ft">
+                <button class="btn primary" onclick="proceedExit()"><span class="ico">✓</span><span class="txt"><span>I've Checked — Proceed</span></span></button>
+                <button class="btn" onclick="closeChecklist()"><span class="ico">↩</span><span class="txt"><span>Stay Inside</span></span></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Emergency picker -->
+          <div class="mask" id="emergMask">
+            <div class="modal">
+              <div class="modal-hd">
+                <div class="t">Emergency Numbers</div>
+                <div class="s">All calls are logged with your vehicle ID and GPS location.</div>
+              </div>
+              <div class="modal-bd">
+                <div class="emerg-list">
+                  <button class="emerg-btn" onclick="startFlow('emergency_911')">
+                    <div class="n">911</div>
+                    <div class="t"><div class="h">Local Emergency Dispatch</div><div class="p">Police · Fire · EMS</div></div>
+                  </button>
+                  <button class="emerg-btn ops" onclick="startFlow('emergency_ops')">
+                    <div class="n">OPS</div>
+                    <div class="t"><div class="h">Operations Center</div><div class="p">Live operator · Remote takeover</div></div>
+                  </button>
+                </div>
+              </div>
+              <div class="modal-ft">
+                <button class="btn" onclick="closeEmergency()"><span class="ico">↩</span><span class="txt"><span>Cancel</span></span></button>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /.app -->
+      </div><!-- /.phone-frame -->
+    </div><!-- /.stage-vp -->
+  </section>
+
+  <div class="scenario-strip">
+    <div class="strip-label">Scenarios</div>
+    <button class="s-btn risk-med"  id="btn-ext_signal" onclick="triggerScenario('ext_signal')">🚦 Signal Anomaly<small>Hold in traffic · Med risk</small></button>
+    <button class="s-btn risk-med"  id="btn-ext_env"    onclick="triggerScenario('ext_env')">🌫️ Severe Weather<small>Low visibility hold · Med risk</small></button>
+    <button class="s-btn risk-high" id="btn-ext_comm"   onclick="triggerScenario('ext_comm')">📵 Network Lost<small>Local safe mode · High risk</small></button>
+    <button class="s-btn risk-high" id="btn-int_hw"     onclick="triggerScenario('int_hw')">🔧 Hardware Fault<small>Field team coming · High risk</small></button>
+    <button class="s-btn risk-low"  id="btn-int_percep" onclick="triggerScenario('int_percep')">👁️ Sensor Recalibrate<small>Brief pause · Low risk</small></button>
+    <button class="s-btn risk-high" id="btn-int_algo"   onclick="triggerScenario('int_algo')">🧠 Decision Required<small>Talk to operator · High risk</small></button>
+    <button class="s-btn risk-low"  id="btn-safe_exit"  onclick="triggerScenario('safe_exit')">🚪 Cautious Exit<small>Support on-site · Verify before exit</small></button>
+    <button class="s-btn"           id="btn-reset"      onclick="triggerScenario('reset')">🔄 Reset<small>Initial baseline</small></button>
+  </div>
+</div>
+
+<script>
+const SK = "robotaxi_shared_state_en_v1";
+const BK = "robotaxi_shared_bus_en_v1";
+const CH = "robotaxi_hmi_sync_en_v1";
+
+let bc;
+try { bc = new BroadcastChannel(CH); } catch(e) {}
+let lastBusTs = 0;
+let currentScenario = "reset";
+
+const SCENARIOS = {
+  reset: {
+    theme: "theme-idle", tag: "Standby", icon: "🛡️",
+    title: "All Systems Normal",
+    text: "Pick a scenario below to preview the rider mobile.",
+    risk: "", riskText: "Idle", riskGlyph: "—",
+    caution: null,
+    exitEnabled: false, exitLabel: "Request to Exit", exitSub: "Review checklist first"
+  },
+  ext_signal: {
+    theme: "", tag: "External · Signal Anomaly", icon: "🚦",
+    title: "Holding at Intersection",
+    text: "The vehicle has stopped before an unclear signal. Waiting for it to resolve.",
+    risk: "med", riskText: "Medium", riskGlyph: "!",
+    caution: { icon: "🪑", h: "Please remain seated",
+      p: "Do not attempt to exit. The vehicle is stopped in traffic — opening the door here is unsafe." },
+    exitEnabled: false, exitLabel: "Exit Not Available", exitSub: "Vehicle is in traffic"
+  },
+  ext_env: {
+    theme: "theme-med", tag: "External · Weather", icon: "🌫️",
+    title: "Holding for Low Visibility",
+    text: "Heavy fog or rain. We've pulled over until conditions improve.",
+    risk: "med", riskText: "Medium", riskGlyph: "!",
+    caution: { icon: "🌧️", h: "Stay inside — bad weather is risky",
+      p: "Low visibility makes it harder for other drivers to see you. Please wait inside." },
+    exitEnabled: false, exitLabel: "Exit Not Recommended", exitSub: "Visibility too low"
+  },
+  ext_comm: {
+    theme: "theme-high", tag: "Connection Lost", icon: "📵",
+    title: "Local Safe Mode",
+    text: "Lost the link to operations. Vehicle is stopped and running on local fallback.",
+    risk: "high", riskText: "High", riskGlyph: "!",
+    caution: { critical: true, icon: "⚠️", h: "Do Not Exit",
+      p: "We have lost contact with operations and cannot verify what's outside. Stay inside. Use the emergency numbers if you need help right now." },
+    exitEnabled: false, exitLabel: "Exit Not Recommended", exitSub: "Operator link lost"
+  },
+  int_hw: {
+    theme: "theme-high", tag: "Hardware Fault", icon: "🔧",
+    title: "Field Team On The Way",
+    text: "A hardware fault was detected. A field team has been dispatched and will guide you in person.",
+    risk: "high", riskText: "High", riskGlyph: "!",
+    caution: { critical: true, icon: "🚑", h: "Do Not Exit Alone",
+      p: "Wait inside until the field team arrives. They will come to the window, identify themselves, and walk you through exiting safely." },
+    exitEnabled: false, exitLabel: "Wait For Field Team", exitSub: "Do not exit alone"
+  },
+  int_percep: {
+    theme: "", tag: "Sensor Recalibration", icon: "👁️",
+    title: "Brief Pause — No Action Needed",
+    text: "Sensor confidence dipped. Recalibration usually finishes in under a minute.",
+    risk: "low", riskText: "Low", riskGlyph: "i",
+    caution: { icon: "🪑", h: "Stay seated — the drive will resume on its own",
+      p: "Please don't attempt to exit; the vehicle may begin moving again at any moment." },
+    exitEnabled: false, exitLabel: "Exit Not Available", exitSub: "Drive resuming shortly"
+  },
+  int_algo: {
+    theme: "theme-high", tag: "Decision Required", icon: "🤔",
+    title: "Your Input Is Needed",
+    text: "The vehicle can't choose a path with enough confidence. Please call the operator for help.",
+    risk: "high", riskText: "High", riskGlyph: "!",
+    caution: { critical: true, icon: "⚠️", h: "Do Not Exit Here",
+      p: "We are stopped on the active route, not in a safe pull-out. Stepping out here puts you in moving traffic. Call the operator first." },
+    exitEnabled: false, exitLabel: "Talk To Operator First", exitSub: "Don't exit on the route"
+  },
+  safe_exit: {
+    theme: "theme-safe", tag: "Stopped · Support On-Site", icon: "🚪",
+    title: "Please Exit With Caution",
+    text: "Vehicle is stopped in a roadside pull-out. An on-site team is present. The left door is being unlocked.",
+    risk: "low", riskText: "Lower", riskGlyph: "i",
+    caution: { icon: "⚠️", h: "Check surroundings before stepping out",
+      p: "Even with support present, traffic and curbs are still dangerous. Look both ways, watch for bikes, take your belongings, and step out slowly." },
+    exitEnabled: true, exitLabel: "Confirm Exit", exitSub: "Review the checklist first"
+  }
+};
+
+const FLOWS = {
+  call_operator: {
+    title: "Calling Operator",
+    sub: "Connecting to operations center.",
+    icon: "📞", iconTheme: "",
+    stages: [
+      { label: "Dial",     h: "Dialing operator…",     p: "Establishing voice link. Stay on this screen — usually 5–15 seconds.", anim: "ring",      ms: 3500, animIco: "📞" },
+      { label: "Connect",  h: "Operator connected",     p: "You're now speaking with a live operator. Describe what's happening.", anim: "connected", ms: 2200, animIco: "👤" },
+      { label: "On Call",  h: "Call in progress",       p: "Stay on the line until the operator says you can hang up.",            anim: "connected", animIco: "🎙️",
+        await: true, primary: { label: "End Call", action: "endCall" },
+        feed: [
+          { at: 0,    h: "Diagnostics sent",     p: "Last 30 s of sensor logs uploaded.",   tag: "Auto · 0:01" },
+          { at: 3000, h: "Case file opened",     p: "Reference: %CASE%",                    tag: "Operator · 0:04" },
+          { at: 7000, h: "Cabin video link",     p: "Operator can see what you see.",       tag: "Vehicle · 0:08" },
+          { at: 12000,h: "Remote takeover ready",p: "Operator can drive if needed.",        tag: "Operator · 0:12" },
+          { at: 17000,h: "Field team on standby",p: "Can be dispatched on request.",        tag: "Dispatch · 0:17" }
+        ]
+      }
+    ]
+  },
+
+  emergency_911: {
+    title: "Calling 911",
+    sub: "Reaching local emergency dispatch.",
+    icon: "🚨", iconTheme: "theme-high",
+    stages: [
+      { label: "Dial",    h: "Dialing 911…",         p: "GPS and vehicle ID being shared automatically.",         anim: "ring",      ms: 3000, animIco: "🚨" },
+      { label: "Connect", h: "911 dispatcher",       p: "Tell them where you are and what's happening.",          anim: "connected", ms: 2200, animIco: "👤" },
+      { label: "On Call", h: "Call in progress",     p: "Stay on the line. Don't hang up until told it's OK.",    anim: "connected", animIco: "🎙️",
+        await: true, primary: { label: "End Call", action: "endCall" },
+        feed: [
+          { at: 0,     h: "GPS uploaded",        p: "Coordinates sent to dispatch.",       tag: "Auto · 0:01" },
+          { at: 3500,  h: "Case file opened",    p: "Reference: %CASE%",                   tag: "Dispatcher · 0:04" },
+          { at: 7500,  h: "Police unit assigned",p: "Patrol unit en route. ETA ~6 min.",   tag: "Dispatch · 0:08" },
+          { at: 12000, h: "EMS on standby",      p: "Medics paged if injuries reported.",  tag: "EMS · 0:12" },
+          { at: 17000, h: "Live data link",      p: "Cabin video streaming to officers.",  tag: "Vehicle · 0:17" }
+        ]
+      }
+    ]
+  },
+
+  emergency_ops: {
+    title: "Calling Operations",
+    sub: "Direct line to Robotaxi operations.",
+    icon: "🛠️", iconTheme: "",
+    stages: [
+      { label: "Dial",    h: "Dialing operations…", p: "Reaching internal operations. Diagnostics uploading.", anim: "ring",      ms: 3000, animIco: "🛠️" },
+      { label: "Connect", h: "Operator connected",   p: "Operator has full context on your trip.",              anim: "connected", ms: 2200, animIco: "👤" },
+      { label: "On Call", h: "Call in progress",     p: "Stay on the line until told it's OK to hang up.",      anim: "connected", animIco: "🎙️",
+        await: true, primary: { label: "End Call", action: "endCall" },
+        feed: [
+          { at: 0,     h: "Diagnostics sent",      p: "Last 30 s of logs uploaded.",         tag: "Auto · 0:01" },
+          { at: 3500,  h: "Case file opened",      p: "Reference: %CASE%",                   tag: "Operator · 0:04" },
+          { at: 7500,  h: "Cabin video link",      p: "Operator can see what you see.",      tag: "Vehicle · 0:08" },
+          { at: 12000, h: "Remote takeover ready", p: "Operator can drive if needed.",       tag: "Operator · 0:12" },
+          { at: 17000, h: "Field team on standby", p: "Can be dispatched on request.",       tag: "Dispatch · 0:17" }
+        ]
+      }
+    ]
+  },
+
+  exit_unlock: {
+    title: "Preparing to Exit",
+    sub: "Verifying, then unlocking the door.",
+    icon: "🚪", iconTheme: "theme-safe",
+    stages: [
+      { label: "Verify", h: "Verifying exit side",        p: "Checking traffic on left and right. Please stay seated.", anim: "scan",    ms: 2500, animIco: "🔍" },
+      { label: "Unlock", h: "Unlocking the door",         p: "Left-side door unlocking. <b>Use that side only.</b>",    anim: "spinner", ms: 1800, animIco: "🔓" },
+      { label: "Exit",   h: "Door unlocked — exit carefully",
+        p: "Look both ways once more, take your belongings, step out slowly. <b>If anything feels off, stay inside and call the operator.</b>",
+        anim: "success", animIco: "✓",
+        await: true, primary: { label: "Done — Closed Behind Me", action: "exitDone" }, success: true
+      }
+    ]
+  }
+};
+
+function $(id) { return document.getElementById(id); }
+
+function applyScenario(key) {
+  const s = SCENARIOS[key];
+  if (!s) return;
+  currentScenario = key;
+
+  $("hero").className = "hero " + (s.theme || "");
+  $("heroTag").textContent = s.tag;
+  $("heroIcon").textContent = s.icon;
+  $("heroTitle").textContent = s.title;
+  $("heroText").textContent = s.text;
+
+  $("riskChip").className = "risk-chip " + (s.risk || "");
+  $("riskDot").textContent = s.riskGlyph || "—";
+  $("riskText").textContent = s.riskText || "Idle";
+
+  const c = $("caution");
+  if (s.caution) {
+    c.style.display = "flex";
+    c.classList.toggle("critical", !!s.caution.critical);
+    $("cautionIcon").textContent = s.caution.icon;
+    $("cautionH").textContent = s.caution.h;
+    $("cautionP").textContent = s.caution.p;
+  } else {
+    c.style.display = "none";
+    c.classList.remove("critical");
+  }
+
+  const eb = $("btnExit");
+  eb.disabled = !s.exitEnabled;
+  eb.querySelector(".txt > span").textContent = s.exitLabel;
+  eb.querySelector("small").textContent = s.exitSub;
+  eb.classList.toggle("success", !!s.exitEnabled);
+
+  highlightScenarioButton(key);
+}
+
+function highlightScenarioButton(key) {
+  document.querySelectorAll(".s-btn").forEach(b => b.classList.remove("active"));
+  const active = $("btn-" + key);
+  if (active) active.classList.add("active");
+}
+
+/* ===== FLOW ENGINE ===== */
+let flowState = null;
+let stageTimer = null;
+let progressTimer = null;
+let feedTimers = [];
+
+function startFlow(flowKey) {
+  const flow = FLOWS[flowKey];
+  if (!flow) return;
+
+  closeEmergency();
+  closeChecklist();
+
+  const caseId = (flowKey === "emergency_911" ? "ECC-" : flowKey === "emergency_ops" ? "OPS-" : "REF-")
+                  + Math.floor(100000 + Math.random() * 900000);
+  flowState = { flowKey, flow, caseId, stageIdx: 0 };
+
+  $("flowIcon").className = "flow-hd-icon " + (flow.iconTheme || "");
+  $("flowIcon").textContent = flow.icon;
+  $("flowTitle").textContent = flow.title;
+  $("flowSub").textContent = flow.sub;
+
+  const track = $("stageTrack");
+  track.innerHTML = "";
+  flow.stages.forEach((st, i) => {
+    if (i > 0) {
+      const con = document.createElement("div");
+      con.className = "stage-connector";
+      con.innerHTML = '<div class="fill" data-conn="' + i + '"></div>';
+      track.appendChild(con);
+    }
+    const dot = document.createElement("div");
+    dot.className = "stage-dot";
+    dot.dataset.idx = i;
+    dot.innerHTML = '<div class="num"><span>' + (i+1) + '</span></div><div class="lab">' + st.label + '</div>';
+    track.appendChild(dot);
+  });
+
+  $("flowMask").classList.add("show");
+  runStage(0);
+}
+
+function runStage(idx) {
+  if (!flowState) return;
+  const stages = flowState.flow.stages;
+  if (idx >= stages.length) return;
+  flowState.stageIdx = idx;
+  const st = stages[idx];
+
+  document.querySelectorAll(".stage-dot").forEach((d, i) => {
+    d.classList.remove("active", "done");
+    if (i < idx)  d.classList.add("done");
+    if (i === idx) d.classList.add("active");
+  });
+  document.querySelectorAll("[data-conn]").forEach(c => {
+    const i = parseInt(c.dataset.conn, 10);
+    c.style.width = (i <= idx) ? "100%" : "0%";
+  });
+
+  $("stageLabel").textContent = "Step " + (idx+1) + " of " + stages.length + " · " + st.label;
+  $("stageH").innerHTML = st.h;
+  $("stageP").innerHTML = (st.p || "").replace(/%CASE%/g, flowState.caseId);
+
+  const anim = $("stageAnim");
+  anim.className = "stage-anim " + (st.anim || "");
+  $("stageAnimIco").textContent = st.animIco || "•";
+
+  const ft = $("flowFt");
+  ft.innerHTML = "";
+  if (st.await && st.primary) {
+    const b = document.createElement("button");
+    b.className = "btn " + (st.success ? "success" : "danger");
+    b.innerHTML = '<span class="ico">' + (st.primary.action === "endCall" ? "📵" : "✓") + '</span>'
+                 + '<span class="txt"><span>' + st.primary.label + '</span></span>';
+    b.onclick = () => doAction(st.primary.action);
+    ft.appendChild(b);
+  }
+
+  const bar = $("stageBar");
+  const fill = $("stageBarFill");
+  clearInterval(progressTimer);
+  fill.style.width = "0%";
+  bar.classList.remove("indeterminate", "success");
+
+  if (st.await) {
+    bar.classList.add("indeterminate");
+  } else if (st.ms) {
+    if (st.success) bar.classList.add("success");
+    const t0 = Date.now();
+    progressTimer = setInterval(() => {
+      const p = Math.min(1, (Date.now() - t0) / st.ms);
+      fill.style.width = (p * 100) + "%";
+      if (p >= 1) clearInterval(progressTimer);
+    }, 50);
+  }
+
+  clearFeed();
+  if (st.feed && st.feed.length) {
+    $("feed").style.display = "block";
+    st.feed.forEach(item => {
+      const t = setTimeout(() => addFeedItem(item), item.at);
+      feedTimers.push(t);
+    });
+  } else if (idx === 0) {
+    $("feed").style.display = "none";
+  }
+
+  clearTimeout(stageTimer);
+  if (!st.await && st.ms) {
+    stageTimer = setTimeout(() => runStage(idx + 1), st.ms);
+  }
+}
+
+function clearFeed() {
+  feedTimers.forEach(t => clearTimeout(t));
+  feedTimers = [];
+  $("feedList").innerHTML = "";
+}
+
+function addFeedItem(item) {
+  const list = $("feedList");
+  const el = document.createElement("div");
+  el.className = "feed-item";
+  el.innerHTML = '<div class="feed-tag">' + item.tag + '</div>'
+               + '<div class="feed-body"><div class="h">' + item.h + '</div><div class="p">' + (item.p || "").replace(/%CASE%/g, flowState.caseId) + '</div></div>';
+  list.insertBefore(el, list.firstChild);
+}
+
+function doAction(action) {
+  if (action === "endCall" || action === "exitDone") closeFlow();
+}
+
+function closeFlow() {
+  clearTimeout(stageTimer);
+  clearInterval(progressTimer);
+  clearFeed();
+  $("flowMask").classList.remove("show");
+  $("feed").style.display = "none";
+  flowState = null;
+}
+
+function openEmergencyPicker() { $("emergMask").classList.add("show"); }
+function closeEmergency()      { $("emergMask").classList.remove("show"); }
+function confirmExit()         { $("mask").classList.add("show"); }
+function closeChecklist()      { $("mask").classList.remove("show"); }
+function proceedExit() {
+  closeChecklist();
+  startFlow("exit_unlock");
+}
+
+/* Cross-page sync */
+function emitState(scenarioKey) {
+  const msg = {
+    type: "state_update",
+    src: "mobile",
+    state: { causeType: scenarioKey, lastUpdate: Date.now() },
+    ts: Date.now()
+  };
+  try { localStorage.setItem(SK, JSON.stringify(msg.state)); } catch(e){}
+  try { localStorage.setItem(BK, JSON.stringify(msg)); } catch(e){}
+  try { if (bc) bc.postMessage(msg); } catch(e){}
+}
+function triggerScenario(key) {
+  if (!SCENARIOS[key]) return;
+  applyScenario(key);
+  emitState(key);
+}
+function handleBus(msg) {
+  if (!msg || msg.type !== "state_update" || !msg.state) return;
+  if ((msg.ts || 0) <= lastBusTs) return;
+  if (msg.src === "mobile") return;
+  lastBusTs = msg.ts || Date.now();
+  const key = msg.state.causeType || "reset";
+  if (SCENARIOS[key] && key !== currentScenario) applyScenario(key);
+}
+if (bc) bc.onmessage = (e) => handleBus(e.data || {});
+setInterval(() => {
+  try { const raw = localStorage.getItem(BK); if (raw) handleBus(JSON.parse(raw)); } catch(e){}
+}, 800);
+
+function fitPhone() {
+  const vp = $("stageVP");
+  const frame = $("phoneFrame");
+  if (!vp || !frame) return;
+  const w = 390, h = 844;
+  const scale = Math.min(vp.clientWidth / (w + 60), vp.clientHeight / (h + 60), 1);
+  frame.style.transform = `scale(${scale})`;
+}
+window.addEventListener("resize", () => requestAnimationFrame(fitPhone));
+
+function tick() {
+  const d = new Date();
+  $("clock").textContent = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+}
+setInterval(tick, 1000); tick();
+
+applyScenario("reset");
+requestAnimationFrame(fitPhone);
+setTimeout(fitPhone, 100);
+
+window.addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    if ($("mask").classList.contains("show")) closeChecklist();
+    else if ($("emergMask").classList.contains("show")) closeEmergency();
+    else if ($("flowMask").classList.contains("show")) closeFlow();
+  }
+});
+</script>
+</body>
+</html>

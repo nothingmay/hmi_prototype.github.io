@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1280, initial-scale=1.0" />
+  <title>Robotaxi · In-Cabin Safety Display</title>
+  <style>
+    :root {
+      --bg: #f1f5fa;
+      --panel: #ffffff;
+      --line: #d4e0ed;
+      --text: #0f2438;
+      --text-2: #36506b;
+      --muted: #6a8299;
+      --low: #0a7a4a;
+      --med: #b85c00;
+      --high: #c0202e;
+      --blue: #1668d4;
+      --safe: #0b8a72;
+      --shadow-md: 0 4px 16px rgba(15, 36, 56, 0.08), 0 1px 4px rgba(15, 36, 56, 0.04);
+      --shadow-lg: 0 12px 32px rgba(15, 36, 56, 0.12), 0 2px 8px rgba(15, 36, 56, 0.06);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap {
+      width: 100%; height: 100%;
+      padding: 24px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .topstrip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .topstrip .id { display: inline-flex; gap: 8px; align-items: center; }
+    .topstrip .badge {
+      padding: 3px 9px; border-radius: 6px;
+      background: #0f2438; color: #fff;
+      font-size: 11px; font-weight: 800; letter-spacing: 0.04em;
+    }
+    .topstrip .clock {
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      font-size: 15px; font-weight: 900;
+    }
+
+    /* HERO */
+    .hero {
+      flex: 1; min-height: 0;
+      border-radius: 20px;
+      padding: 44px 56px;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 18px;
+      background: linear-gradient(140deg, #2d5a8c, #4a7fb5);
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero.theme-high { background: linear-gradient(140deg, #8a2730, #b34352); }
+    .hero.theme-med  { background: linear-gradient(140deg, #8a5a14, #c08332); }
+    .hero.theme-safe { background: linear-gradient(140deg, #1d6757, #34917d); }
+    .hero.theme-idle { background: linear-gradient(140deg, #3d5168, #607a96); }
+    .hero::before {
+      content: ""; position: absolute; inset: 0;
+      background-image:
+        radial-gradient(circle at 92% 8%, rgba(255,255,255,0.10), transparent 50%),
+        radial-gradient(circle at 0% 100%, rgba(0,0,0,0.16), transparent 60%);
+      pointer-events: none;
+    }
+    .hero > * { position: relative; }
+    .hero-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .hero-tag {
+      display: inline-flex; align-items: center;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.32);
+      background: rgba(255,255,255,0.14);
+      font-size: 12px; font-weight: 800;
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .risk-chip {
+      display: inline-flex; align-items: center;
+      gap: 8px;
+      padding: 6px 14px 6px 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.16);
+      border: 1px solid rgba(255,255,255,0.34);
+      font-size: 12px; font-weight: 900;
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .risk-chip .dot {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #fff;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 900;
+      color: var(--text);
+    }
+    .risk-chip.high .dot { background: #ffd7db; color: #7c1219; }
+    .risk-chip.med  .dot { background: #ffe6c2; color: #6b3400; }
+    .risk-chip.low  .dot { background: #cdeed9; color: #0a5a37; }
+    .risk-chip.high { animation: risk-pulse 1.4s ease-in-out infinite; }
+    @keyframes risk-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.55); }
+      50%      { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+    }
+    .hero-icon { font-size: 80px; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.25)); }
+    .hero-title { font-size: 46px; font-weight: 900; line-height: 1.1; letter-spacing: -0.01em; }
+    .hero-text { font-size: 19px; line-height: 1.5; opacity: 0.96; max-width: 920px; }
+
+    .caution {
+      margin-top: 6px;
+      padding: 18px 22px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.28);
+      display: flex; align-items: flex-start; gap: 14px;
+      max-width: 920px;
+    }
+    .caution-ico { font-size: 32px; line-height: 1; flex-shrink: 0; }
+    .caution-h { font-size: 17px; font-weight: 900; margin-bottom: 4px; }
+    .caution-p { font-size: 14px; line-height: 1.5; opacity: 0.94; }
+
+    /* CRITICAL CAUTION — for life-safety warnings on high-risk scenarios.
+       Reverses contrast against the hero (bright yellow on dark) so it
+       reads as a hazard label, not just a "tip". Hazard stripes + pulsing
+       glow + larger type pull the eye first. */
+    .caution.critical {
+      background: #ffd000;
+      border: 3px solid #1a1a1a;
+      color: #1a1a1a;
+      padding: 22px 28px 22px 22px;
+      max-width: 100%;
+      position: relative;
+      box-shadow:
+        0 0 0 0 rgba(255, 208, 0, 0.7),
+        0 8px 24px rgba(0,0,0,0.35);
+      animation: critical-pulse 1.8s ease-in-out infinite;
+      overflow: hidden;
+    }
+    .caution.critical::before {
+      /* Hazard stripe band along the left edge */
+      content: "";
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 14px;
+      background-image: repeating-linear-gradient(
+        45deg,
+        #1a1a1a 0 10px,
+        #ffd000 10px 20px
+      );
+    }
+    .caution.critical .caution-ico {
+      font-size: 44px;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
+      margin-left: 8px;
+    }
+    .caution.critical .caution-h {
+      font-size: 22px;
+      font-weight: 900;
+      color: #1a1a1a;
+      letter-spacing: -0.005em;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .caution.critical .caution-p {
+      font-size: 15px;
+      color: #1a1a1a;
+      opacity: 1;
+      font-weight: 600;
+    }
+    @keyframes critical-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 208, 0, 0.7), 0 8px 24px rgba(0,0,0,0.35); }
+      50%      { box-shadow: 0 0 0 12px rgba(255, 208, 0, 0), 0 8px 24px rgba(0,0,0,0.35); }
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .btn {
+      min-height: 78px;
+      padding: 14px 18px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: var(--shadow-md);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 16px; font-weight: 900;
+      color: var(--text);
+      display: flex; align-items: center; gap: 12px;
+      text-align: left;
+      transition: transform 0.12s, box-shadow 0.15s;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+    .btn:active { transform: translateY(0); }
+    .btn .ico { font-size: 26px; line-height: 1; flex-shrink: 0; }
+    .btn .txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .btn small { font-size: 12px; font-weight: 700; color: var(--muted); }
+    .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .btn.primary small { color: rgba(255,255,255,0.85); }
+    .btn.danger { background: var(--high); border-color: var(--high); color: #fff; }
+    .btn.danger small { color: rgba(255,255,255,0.85); }
+    .btn.success { background: var(--safe); border-color: var(--safe); color: #fff; }
+    .btn.success small { color: rgba(255,255,255,0.85); }
+    .btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+    .btn[disabled]:hover { transform: none; box-shadow: var(--shadow-md); }
+
+    /* ============= FLOW PANEL (full-screen action flow) ============= */
+    .flow-mask {
+      position: fixed; inset: 0;
+      background: rgba(15, 36, 56, 0.65);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      backdrop-filter: blur(3px);
+    }
+    .flow-mask.show { display: flex; }
+    .flow {
+      width: 880px;
+      max-width: 92vw;
+      max-height: 92vh;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .flow-hd {
+      padding: 22px 28px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .flow-hd-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      background: #e9f3fe;
+      color: var(--blue);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 28px;
+    }
+    .flow-hd-icon.theme-high { background: #fce6e8; color: var(--high); }
+    .flow-hd-icon.theme-med  { background: #fdf0db; color: var(--med); }
+    .flow-hd-icon.theme-safe { background: #e0f5e9; color: var(--safe); }
+    .flow-hd-title { font-size: 20px; font-weight: 900; }
+    .flow-hd-sub { font-size: 13px; font-weight: 700; color: var(--muted); margin-top: 2px; }
+    .flow-hd-close {
+      margin-left: auto;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      color: var(--muted);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .flow-hd-close:hover { background: var(--bg); color: var(--text); }
+    .flow-hd-close[disabled] { opacity: 0.3; cursor: not-allowed; }
+
+    /* Stage track (progress dots) */
+    .stage-track {
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border-bottom: 1px solid var(--line);
+      background: #f9fbfd;
+    }
+    .stage-dot {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .stage-dot .num {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: #e3ecf5;
+      color: var(--muted);
+      font-size: 12px; font-weight: 900;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: all 0.25s;
+    }
+    .stage-dot .lab {
+      font-size: 11px;
+      font-weight: 900;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      transition: color 0.25s;
+    }
+    .stage-dot.active .num { background: var(--blue); color: #fff; box-shadow: 0 0 0 4px rgba(22, 104, 212, 0.18); }
+    .stage-dot.active .lab { color: var(--blue); }
+    .stage-dot.done .num { background: var(--safe); color: #fff; }
+    .stage-dot.done .lab { color: var(--safe); }
+    .stage-dot.done .num::after { content: "✓"; }
+    .stage-dot.done .num > span { display: none; }
+    .stage-connector {
+      flex: 1;
+      height: 3px;
+      background: #e3ecf5;
+      margin: 0 10px;
+      border-radius: 2px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stage-connector .fill {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      background: var(--safe);
+      width: 0;
+      transition: width 0.4s ease;
+    }
+
+    /* Progress bar (current stage timer) */
+    .stage-bar {
+      height: 4px;
+      background: #e3ecf5;
+      position: relative;
+      overflow: hidden;
+    }
+    .stage-bar .fill {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      background: linear-gradient(90deg, var(--blue), #4ba0ee);
+      width: 0;
+      transition: width 0.1s linear;
+    }
+    .stage-bar.success .fill { background: var(--safe); }
+    .stage-bar.indeterminate .fill {
+      width: 30% !important;
+      animation: indet 1.6s ease-in-out infinite;
+      background: linear-gradient(90deg, transparent, var(--blue), transparent);
+    }
+    @keyframes indet {
+      0%   { left: -30%; }
+      100% { left: 100%; }
+    }
+
+    /* Stage body */
+    .stage-body {
+      padding: 28px 28px 8px;
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .stage-anim {
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+      border-radius: 16px;
+      background: #f3f8fe;
+      border: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 56px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stage-anim.ring::after {
+      content: "";
+      position: absolute; inset: 0;
+      border-radius: 16px;
+      border: 3px solid rgba(22, 104, 212, 0.4);
+      animation: ringPulse 1.3s ease-out infinite;
+    }
+    @keyframes ringPulse {
+      0%   { transform: scale(0.8); opacity: 0.9; }
+      100% { transform: scale(1.15); opacity: 0; }
+    }
+    .stage-anim.connected .ico-anim { animation: wave 1s ease-in-out infinite; }
+    @keyframes wave {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.12); }
+    }
+    .stage-anim.scan::before {
+      content: "";
+      position: absolute;
+      left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--blue), transparent);
+      animation: scanLine 1.6s ease-in-out infinite;
+    }
+    @keyframes scanLine {
+      0%   { top: 10%; }
+      100% { top: 90%; }
+    }
+    .stage-anim.success { background: #e0f5e9; border-color: var(--safe); color: var(--safe); }
+    .stage-anim.spinner .ico-anim { animation: spin 1.2s linear infinite; }
+    @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+    .stage-info { flex: 1; min-width: 0; }
+    .stage-label {
+      font-size: 11px; font-weight: 900;
+      color: var(--blue);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .stage-h { font-size: 24px; font-weight: 900; line-height: 1.2; margin-bottom: 6px; }
+    .stage-p { font-size: 15px; line-height: 1.55; color: var(--text-2); }
+    .stage-p b { color: var(--text); }
+
+    /* Live feed */
+    .feed {
+      padding: 16px 28px 20px;
+      border-top: 1px solid var(--line);
+      background: #fafcfe;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .feed-h {
+      font-size: 11px; font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .feed-h .pulse {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--safe);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.4; }
+    }
+    .feed-item {
+      display: flex;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px dashed #e3ecf5;
+      animation: feedIn 0.4s ease-out;
+    }
+    .feed-item:last-child { border-bottom: none; }
+    @keyframes feedIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .feed-tag {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--muted);
+      flex-shrink: 0;
+      min-width: 110px;
+      padding-top: 1px;
+    }
+    .feed-body { flex: 1; min-width: 0; }
+    .feed-body .h { font-size: 13px; font-weight: 900; margin-bottom: 1px; }
+    .feed-body .p { font-size: 12px; color: var(--text-2); line-height: 1.4; }
+
+    /* Footer actions inside flow */
+    .flow-ft {
+      padding: 14px 28px 20px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    .flow-ft .btn { min-height: 48px; padding: 10px 18px; font-size: 14px; box-shadow: none; }
+    .flow-ft .btn .ico { font-size: 18px; }
+
+    /* Exit checklist modal */
+    .mask {
+      position: fixed; inset: 0;
+      background: rgba(15, 36, 56, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 60;
+      backdrop-filter: blur(2px);
+    }
+    .mask.show { display: flex; }
+    .modal {
+      width: 560px;
+      max-width: 90vw;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+    .modal-hd { padding: 22px 26px 14px; border-bottom: 1px solid var(--line); }
+    .modal-hd .t { font-size: 20px; font-weight: 900; }
+    .modal-hd .s { font-size: 13px; font-weight: 700; color: var(--muted); margin-top: 4px; }
+    .modal-bd { padding: 20px 26px; font-size: 15px; line-height: 1.55; color: var(--text-2); }
+    .modal-bd ul { margin: 10px 0 0 18px; }
+    .modal-bd li { margin-bottom: 6px; }
+    .modal-bd strong { color: var(--text); }
+    .modal-ft { padding: 14px 26px 22px; display: flex; gap: 10px; justify-content: flex-end; }
+    .modal-ft .btn { min-height: 48px; padding: 10px 18px; font-size: 14px; box-shadow: none; }
+    .modal-ft .btn .ico { font-size: 18px; }
+
+    /* Emergency picker modal */
+    .emerg-list { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+    .emerg-btn {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: left;
+      transition: all 0.15s;
+    }
+    .emerg-btn:hover { border-color: var(--high); background: #fff7f8; }
+    .emerg-btn .n {
+      width: 56px; height: 40px;
+      border-radius: 8px;
+      background: var(--high);
+      color: #fff;
+      font-size: 17px; font-weight: 900;
+      display: inline-flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .emerg-btn.ops .n { background: var(--blue); }
+    .emerg-btn .t { display: flex; flex-direction: column; gap: 1px; }
+    .emerg-btn .t .h { font-size: 15px; font-weight: 900; color: var(--text); }
+    .emerg-btn .t .p { font-size: 12px; color: var(--muted); font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topstrip">
+      <div class="id">
+        <span class="badge">VEHICLE</span>
+        <span>RT-04821 · Route #A12</span>
+      </div>
+      <div class="clock" id="clock">--:--</div>
+    </div>
+
+    <section class="hero theme-idle" id="hero">
+      <div class="hero-row">
+        <div class="hero-tag" id="heroTag">Standby</div>
+        <div class="risk-chip" id="riskChip"><span class="dot" id="riskDot">—</span><span id="riskText">Idle</span></div>
+      </div>
+      <div class="hero-row">
+        <div class="hero-icon" id="heroIcon">🛡️</div>
+        <div style="flex:1; min-width: 0;">
+          <div class="hero-title" id="heroTitle">All Systems Normal</div>
+        </div>
+      </div>
+      <div class="hero-text" id="heroText">Pick a scenario from the workspace to preview the in-cabin response.</div>
+      <div class="caution" id="caution" style="display:none;">
+        <div class="caution-ico" id="cautionIcon">⚠️</div>
+        <div>
+          <div class="caution-h" id="cautionH"></div>
+          <div class="caution-p" id="cautionP"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button class="btn primary" onclick="startFlow('call_operator')">
+        <span class="ico">📞</span>
+        <span class="txt"><span>Call Operator</span><small>Talk to a live agent</small></span>
+      </button>
+      <button class="btn danger" onclick="openEmergencyPicker()">
+        <span class="ico">🚨</span>
+        <span class="txt"><span>Emergency Numbers</span><small>911 · Operations · Roadside</small></span>
+      </button>
+      <button class="btn" id="btnExit" onclick="confirmExit()" disabled>
+        <span class="ico">🚪</span>
+        <span class="txt"><span>Request to Exit</span><small>Review safety checklist first</small></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============= FLOW PANEL ============= -->
+  <div class="flow-mask" id="flowMask">
+    <div class="flow">
+      <div class="flow-hd">
+        <div class="flow-hd-icon" id="flowIcon">📞</div>
+        <div>
+          <div class="flow-hd-title" id="flowTitle">—</div>
+          <div class="flow-hd-sub" id="flowSub">—</div>
+        </div>
+        <button class="flow-hd-close" id="flowClose" onclick="closeFlow()" title="Close">✕</button>
+      </div>
+      <div class="stage-track" id="stageTrack"></div>
+      <div class="stage-bar" id="stageBar"><div class="fill" id="stageBarFill"></div></div>
+      <div class="stage-body">
+        <div class="stage-anim" id="stageAnim"><span class="ico-anim" id="stageAnimIco">📞</span></div>
+        <div class="stage-info">
+          <div class="stage-label" id="stageLabel">Stage 1</div>
+          <div class="stage-h" id="stageH">—</div>
+          <div class="stage-p" id="stageP">—</div>
+        </div>
+      </div>
+      <div class="feed" id="feed" style="display:none;">
+        <div class="feed-h"><div class="pulse"></div><span>Live Activity</span></div>
+        <div id="feedList"></div>
+      </div>
+      <div class="flow-ft" id="flowFt"></div>
+    </div>
+  </div>
+
+  <!-- Exit checklist modal -->
+  <div class="mask" id="mask">
+    <div class="modal">
+      <div class="modal-hd">
+        <div class="t">Before You Exit — Please Read</div>
+        <div class="s">Exiting a vehicle is a high-risk action. Take a moment to check.</div>
+      </div>
+      <div class="modal-bd">
+        <strong>Even when the door is unlocked, the surroundings can still be unsafe.</strong> Before stepping out, please:
+        <ul>
+          <li>Look for moving traffic on the side you're about to exit on — including bikes and scooters.</li>
+          <li>Confirm an on-site team member or operator has waved you out, if one is expected.</li>
+          <li>Hold the door, step out slowly, and watch your footing — curbs and uneven ground are common.</li>
+          <li>If anything feels uncertain, stay inside and call the operator.</li>
+        </ul>
+      </div>
+      <div class="modal-ft">
+        <button class="btn" onclick="closeChecklist()"><span class="ico">↩</span><span class="txt"><span>Stay Inside</span></span></button>
+        <button class="btn primary" onclick="proceedExit()"><span class="ico">✓</span><span class="txt"><span>I've Checked — Proceed</span></span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emergency picker modal -->
+  <div class="mask" id="emergMask">
+    <div class="modal">
+      <div class="modal-hd">
+        <div class="t">Emergency Numbers</div>
+        <div class="s">Pick who to reach. All calls are logged with your vehicle ID and GPS location.</div>
+      </div>
+      <div class="modal-bd">
+        <div class="emerg-list">
+          <button class="emerg-btn" onclick="startFlow('emergency_911')">
+            <div class="n">911</div>
+            <div class="t"><div class="h">Local Emergency Dispatch</div><div class="p">Police · Fire · EMS — United States</div></div>
+          </button>
+          <button class="emerg-btn ops" onclick="startFlow('emergency_ops')">
+            <div class="n">OPS</div>
+            <div class="t"><div class="h">Robotaxi Operations Center</div><div class="p">Live operator · Remote takeover available</div></div>
+          </button>
+        </div>
+      </div>
+      <div class="modal-ft">
+        <button class="btn" onclick="closeEmergency()"><span class="ico">↩</span><span class="txt"><span>Cancel</span></span></button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const SK = "robotaxi_shared_state_en_v1";
+const BK = "robotaxi_shared_bus_en_v1";
+const CH = "robotaxi_hmi_sync_en_v1";
+
+let bc;
+try { bc = new BroadcastChannel(CH); } catch(e) {}
+let lastBusTs = 0;
+let currentScenario = "reset";
+
+/* ============================================================
+   SCENARIOS — what the hero shows (passive state)
+   ============================================================ */
+const SCENARIOS = {
+  reset: {
+    theme: "theme-idle", tag: "Standby", icon: "🛡️",
+    title: "All Systems Normal",
+    text: "Pick a scenario from the workspace to preview the in-cabin response.",
+    risk: "", riskText: "Idle", riskGlyph: "—",
+    caution: null,
+    exitEnabled: false, exitLabel: "Request to Exit", exitSub: "Review safety checklist first"
+  },
+  ext_signal: {
+    theme: "", tag: "External · Signal Anomaly", icon: "🚦",
+    title: "Holding at Intersection",
+    text: "The vehicle has stopped before an unclear traffic signal. We're waiting for it to resolve.",
+    risk: "med", riskText: "Medium Risk", riskGlyph: "!",
+    caution: { icon: "🪑", h: "Please remain seated",
+      p: "Do not attempt to exit. The vehicle is stopped in traffic — opening the door here is unsafe. The drive will resume on its own." },
+    exitEnabled: false, exitLabel: "Exit Not Available", exitSub: "Vehicle is in traffic"
+  },
+  ext_env: {
+    theme: "theme-med", tag: "External · Weather", icon: "🌫️",
+    title: "Holding for Low Visibility",
+    text: "Heavy fog or rain has reduced sensor confidence. We've pulled over and are waiting for conditions to improve.",
+    risk: "med", riskText: "Medium Risk", riskGlyph: "!",
+    caution: { icon: "🌧️", h: "Stay inside — exiting in bad weather is risky",
+      p: "Low visibility makes it harder for other drivers to see you. Please wait inside until conditions improve and the drive can resume." },
+    exitEnabled: false, exitLabel: "Exit Not Recommended", exitSub: "Visibility too low"
+  },
+  ext_comm: {
+    theme: "theme-high", tag: "Connection Lost", icon: "📵",
+    title: "Local Safe Mode",
+    text: "We've lost the link to the operations center. The vehicle has stopped and is running on local fallback.",
+    risk: "high", riskText: "High Risk", riskGlyph: "!",
+    caution: { critical: true, icon: "⚠️", h: "Do Not Exit",
+      p: "We have lost contact with the operations center, so we cannot verify what's outside the vehicle. Please remain inside. Use the emergency numbers if you need help right now." },
+    exitEnabled: false, exitLabel: "Exit Not Recommended", exitSub: "Operator link lost"
+  },
+  int_hw: {
+    theme: "theme-high", tag: "Hardware Fault", icon: "🔧",
+    title: "Field Team On The Way",
+    text: "A hardware fault was detected and the vehicle has stopped. A field team has been dispatched and will guide you in person.",
+    risk: "high", riskText: "High Risk", riskGlyph: "!",
+    caution: { critical: true, icon: "🚑", h: "Do Not Exit Alone",
+      p: "Wait inside until the field team arrives. They will come to the window, identify themselves, and walk you through exiting safely. Do not try to exit on your own before then." },
+    exitEnabled: false, exitLabel: "Wait For Field Team", exitSub: "Do not exit alone"
+  },
+  int_percep: {
+    theme: "", tag: "Sensor Recalibration", icon: "👁️",
+    title: "Brief Pause — No Action Needed",
+    text: "Sensor confidence dipped and the system is recalibrating. This usually finishes in under a minute.",
+    risk: "low", riskText: "Low Risk", riskGlyph: "i",
+    caution: { icon: "🪑", h: "Stay seated — the drive will resume on its own",
+      p: "There's nothing you need to do. Please don't attempt to exit; the vehicle may begin moving again at any moment." },
+    exitEnabled: false, exitLabel: "Exit Not Available", exitSub: "Drive resuming shortly"
+  },
+  int_algo: {
+    theme: "theme-high", tag: "Decision Required", icon: "🤔",
+    title: "Your Input Is Needed",
+    text: "The vehicle can't choose a path on its own with enough confidence. Please call the operator for help.",
+    risk: "high", riskText: "High Risk", riskGlyph: "!",
+    caution: { critical: true, icon: "⚠️", h: "Do Not Exit Here",
+      p: "We are stopped on the active route, not in a safe pull-out. Stepping out here puts you in moving traffic. Please call the operator first — they will guide you to the right next step." },
+    exitEnabled: false, exitLabel: "Talk To Operator First", exitSub: "Don't exit on the route"
+  },
+  safe_exit: {
+    theme: "theme-safe", tag: "Stopped · Support On-Site", icon: "🚪",
+    title: "Please Exit With Caution",
+    text: "The vehicle is stopped in a roadside pull-out and an on-site team is present. The left-side door is being unlocked.",
+    risk: "low", riskText: "Lower Risk", riskGlyph: "i",
+    caution: { icon: "⚠️", h: "Check your surroundings before stepping out",
+      p: "Even with support present, traffic and curbs can still be dangerous. Look both ways, watch for bikes and scooters, take your belongings, and step out slowly. If anything feels off, stay inside and call the operator." },
+    exitEnabled: true, exitLabel: "Confirm Exit", exitSub: "Review the checklist first"
+  }
+};
+
+/* ============================================================
+   FLOWS — multi-stage action sequences (active state)
+   Each flow shows: stage track + progress bar + current stage
+   detail + optional live feed + optional manual controls.
+   ============================================================ */
+const FLOWS = {
+  call_operator: {
+    title: "Calling Operator",
+    sub: "Connecting you to a live agent at the operations center.",
+    icon: "📞", iconTheme: "",
+    stages: [
+      { label: "Dial",      h: "Dialing operator…",         p: "Establishing a voice link with the operations center. Stay on this screen — this usually takes 5–15 seconds.", anim: "ring",      ms: 3500, animIco: "📞" },
+      { label: "Connect",   h: "Operator connected",        p: "You're now speaking with a live operator. Describe what's happening — they can see your vehicle status.",   anim: "connected", ms: 2200, animIco: "👤" },
+      { label: "On Call",   h: "Call in progress",          p: "Stay on the line until the operator says you can hang up. They'll guide you through the next step.",        anim: "connected", animIco: "🎙️",
+        await: true, primary: { label: "End Call", action: "endCall" },
+        feed: [
+          { at: 0,    h: "Diagnostics package sent",    p: "Last 30 s of sensor logs uploaded to operations.",   tag: "Auto · 0:01" },
+          { at: 3000, h: "Case file opened",            p: "Reference: %CASE%. Operator has full context.",      tag: "Operator · 0:04" },
+          { at: 7000, h: "Cabin video link active",     p: "Operator can see what you see.",                     tag: "Vehicle · 0:08" },
+          { at: 12000,h: "Remote takeover ready",       p: "If needed, operator can drive the vehicle remotely.",tag: "Operator · 0:12" },
+          { at: 17000,h: "Field team on standby",       p: "Roadside team can be dispatched on your request.",   tag: "Dispatch · 0:17" }
+        ]
+      }
+    ]
+  },
+
+  emergency_911: {
+    title: "Calling 911",
+    sub: "Reaching local emergency dispatch (US). Stay on the line.",
+    icon: "🚨", iconTheme: "theme-high",
+    stages: [
+      { label: "Dial",     h: "Dialing 911…",        p: "Reaching local emergency dispatch. Your GPS location and vehicle ID are being shared automatically.", anim: "ring",      ms: 3000, animIco: "🚨" },
+      { label: "Connect",  h: "911 dispatcher on the line", p: "Tell them where you are and what's happening. Try to stay calm — they will guide you.",        anim: "connected", ms: 2200, animIco: "👤" },
+      { label: "On Call",  h: "Call in progress",     p: "Stay on the line. Don't hang up until the dispatcher tells you it's OK. Help is being coordinated.",  anim: "connected", animIco: "🎙️",
+        await: true, primary: { label: "End Call", action: "endCall" },
+        feed: [
+          { at: 0,     h: "GPS location uploaded",  p: "Coordinates and vehicle ID sent to dispatch.",         tag: "Auto · 0:01" },
+          { at: 3500,  h: "Case file opened",       p: "Reference: %CASE%. Vehicle data attached.",            tag: "Dispatcher · 0:04" },
+          { at: 7500,  h: "Police unit assigned",   p: "Patrol unit en route. Estimated arrival 6 min.",       tag: "Dispatch · 0:08" },
+          { at: 12000, h: "EMS on standby",         p: "Medics paged. Will respond if you confirm injuries.",  tag: "EMS · 0:12" },
+          { at: 17000, h: "Live data link active",  p: "Cabin video and door status streaming to officers.",   tag: "Vehicle · 0:17" }
+        ]
+      }
+    ]
+  },
+
+  emergency_ops: {
+    title: "Calling Operations Center",
+    sub: "Direct line to Robotaxi internal operations.",
+    icon: "🛠️", iconTheme: "",
+    stages: [
+      { label: "Dial",    h: "Dialing operations center…", p: "Reaching Robotaxi internal operations. Diagnostics are uploading in parallel.", anim: "ring",      ms: 3000, animIco: "🛠️" },
+      { label: "Connect", h: "Operator connected",          p: "A Robotaxi operator is now on the line and has full context on your trip.",    anim: "connected", ms: 2200, animIco: "👤" },
+      { label: "On Call", h: "Call in progress",            p: "Stay on the line until the operator says you can hang up. Remote takeover and field dispatch are available if needed.", anim: "connected", animIco: "🎙️",
+        await: true, primary: { label: "End Call", action: "endCall" },
+        feed: [
+          { at: 0,     h: "Diagnostics package sent",  p: "Last 30 s of sensor logs uploaded to operations.",  tag: "Auto · 0:01" },
+          { at: 3500,  h: "Case file opened",          p: "Reference: %CASE%. Operator has full context.",     tag: "Operator · 0:04" },
+          { at: 7500,  h: "Cabin video link active",   p: "Operator can see what you see.",                    tag: "Vehicle · 0:08" },
+          { at: 12000, h: "Remote takeover ready",     p: "If needed, operator can drive the vehicle remotely.",tag: "Operator · 0:12" },
+          { at: 17000, h: "Field team on standby",     p: "Roadside team can be dispatched on your request.",  tag: "Dispatch · 0:17" }
+        ]
+      }
+    ]
+  },
+
+  exit_unlock: {
+    title: "Preparing to Exit",
+    sub: "Verifying surroundings, then unlocking the door.",
+    icon: "🚪", iconTheme: "theme-safe",
+    stages: [
+      { label: "Verify",  h: "Verifying exit side",       p: "Checking traffic on the left and right. Please stay seated until verification finishes.", anim: "scan",    ms: 2500, animIco: "🔍" },
+      { label: "Unlock",  h: "Unlocking the door",        p: "The left-side door is unlocking. <b>Please use that side only.</b>", anim: "spinner", ms: 1800, animIco: "🔓" },
+      { label: "Exit",    h: "Door is unlocked — please exit carefully",
+        p: "Look both ways once more, take your belongings, and step out slowly. Hold the door for balance. <b>If anything feels off, stay inside and call the operator.</b>",
+        anim: "success", animIco: "✓",
+        await: true, primary: { label: "Done — Closed Behind Me", action: "exitDone" }, success: true
+      }
+    ]
+  }
+};
+
+/* ============================================================
+   Apply scenario (passive state)
+   ============================================================ */
+function $(id) { return document.getElementById(id); }
+
+function applyScenario(key) {
+  const s = SCENARIOS[key];
+  if (!s) return;
+  currentScenario = key;
+
+  $("hero").className = "hero " + (s.theme || "");
+  $("heroTag").textContent = s.tag;
+  $("heroIcon").textContent = s.icon;
+  $("heroTitle").textContent = s.title;
+  $("heroText").textContent = s.text;
+
+  $("riskChip").className = "risk-chip " + (s.risk || "");
+  $("riskDot").textContent = s.riskGlyph || "—";
+  $("riskText").textContent = s.riskText || "Idle";
+
+  const c = $("caution");
+  if (s.caution) {
+    c.style.display = "flex";
+    c.classList.toggle("critical", !!s.caution.critical);
+    $("cautionIcon").textContent = s.caution.icon;
+    $("cautionH").textContent = s.caution.h;
+    $("cautionP").textContent = s.caution.p;
+  } else {
+    c.style.display = "none";
+    c.classList.remove("critical");
+  }
+
+  const eb = $("btnExit");
+  eb.disabled = !s.exitEnabled;
+  eb.querySelector(".txt > span").textContent = s.exitLabel;
+  eb.querySelector("small").textContent = s.exitSub;
+  eb.classList.toggle("success", !!s.exitEnabled);
+}
+
+/* ============================================================
+   FLOW ENGINE
+   ============================================================ */
+let flowState = null;
+let stageTimer = null;
+let progressTimer = null;
+let feedTimers = [];
+
+function startFlow(flowKey) {
+  const flow = FLOWS[flowKey];
+  if (!flow) return;
+
+  closeEmergency();
+  closeChecklist();
+
+  const caseId = (flowKey === "emergency_911" ? "ECC-" : flowKey === "emergency_ops" ? "OPS-" : "REF-")
+                  + Math.floor(100000 + Math.random() * 900000);
+
+  flowState = {
+    flowKey,
+    flow,
+    caseId,
+    stageIdx: 0
+  };
+
+  $("flowIcon").className = "flow-hd-icon " + (flow.iconTheme || "");
+  $("flowIcon").textContent = flow.icon;
+  $("flowTitle").textContent = flow.title;
+  $("flowSub").textContent = flow.sub;
+
+  // Render stage track
+  const track = $("stageTrack");
+  track.innerHTML = "";
+  flow.stages.forEach((st, i) => {
+    if (i > 0) {
+      const con = document.createElement("div");
+      con.className = "stage-connector";
+      con.innerHTML = '<div class="fill" data-conn="' + i + '"></div>';
+      track.appendChild(con);
+    }
+    const dot = document.createElement("div");
+    dot.className = "stage-dot";
+    dot.dataset.idx = i;
+    dot.innerHTML = '<div class="num"><span>' + (i+1) + '</span></div><div class="lab">' + st.label + '</div>';
+    track.appendChild(dot);
+  });
+
+  $("flowMask").classList.add("show");
+  $("flowClose").disabled = false;
+
+  runStage(0);
+}
+
+function runStage(idx) {
+  if (!flowState) return;
+  const stages = flowState.flow.stages;
+  if (idx >= stages.length) return;
+  flowState.stageIdx = idx;
+  const st = stages[idx];
+
+  // Update track state
+  document.querySelectorAll(".stage-dot").forEach((d, i) => {
+    d.classList.remove("active", "done");
+    if (i < idx)  d.classList.add("done");
+    if (i === idx) d.classList.add("active");
+  });
+  document.querySelectorAll("[data-conn]").forEach(c => {
+    const i = parseInt(c.dataset.conn, 10);
+    c.style.width = (i <= idx) ? "100%" : "0%";
+  });
+
+  // Stage info
+  $("stageLabel").textContent = "Step " + (idx+1) + " of " + stages.length + " · " + st.label;
+  $("stageH").innerHTML = st.h;
+  $("stageP").innerHTML = (st.p || "").replace(/%CASE%/g, flowState.caseId);
+
+  // Animation
+  const anim = $("stageAnim");
+  anim.className = "stage-anim " + (st.anim || "");
+  $("stageAnimIco").textContent = st.animIco || "•";
+
+  // Footer
+  const ft = $("flowFt");
+  ft.innerHTML = "";
+  if (st.await && st.primary) {
+    const b = document.createElement("button");
+    b.className = "btn " + (st.success ? "success" : "danger");
+    b.innerHTML = '<span class="ico">' + (st.primary.action === "endCall" ? "📵" : "✓") + '</span>'
+                 + '<span class="txt"><span>' + st.primary.label + '</span></span>';
+    b.onclick = () => doAction(st.primary.action);
+    ft.appendChild(b);
+  }
+
+  // Progress bar
+  const bar = $("stageBar");
+  const fill = $("stageBarFill");
+  clearInterval(progressTimer);
+  fill.style.width = "0%";
+  bar.classList.remove("indeterminate", "success");
+
+  if (st.await) {
+    // Indeterminate bar while waiting
+    bar.classList.add("indeterminate");
+  } else if (st.ms) {
+    if (st.success) bar.classList.add("success");
+    const t0 = Date.now();
+    progressTimer = setInterval(() => {
+      const p = Math.min(1, (Date.now() - t0) / st.ms);
+      fill.style.width = (p * 100) + "%";
+      if (p >= 1) clearInterval(progressTimer);
+    }, 50);
+  }
+
+  // Feed
+  clearFeed();
+  if (st.feed && st.feed.length) {
+    $("feed").style.display = "block";
+    st.feed.forEach(item => {
+      const t = setTimeout(() => addFeedItem(item), item.at);
+      feedTimers.push(t);
+    });
+  } else if (idx === 0) {
+    $("feed").style.display = "none";
+  }
+
+  // Auto-advance
+  clearTimeout(stageTimer);
+  if (!st.await && st.ms) {
+    stageTimer = setTimeout(() => runStage(idx + 1), st.ms);
+  }
+}
+
+function clearFeed() {
+  feedTimers.forEach(t => clearTimeout(t));
+  feedTimers = [];
+  $("feedList").innerHTML = "";
+}
+
+function addFeedItem(item) {
+  const list = $("feedList");
+  const el = document.createElement("div");
+  el.className = "feed-item";
+  el.innerHTML = '<div class="feed-tag">' + item.tag + '</div>'
+               + '<div class="feed-body"><div class="h">' + item.h + '</div><div class="p">' + (item.p || "").replace(/%CASE%/g, flowState.caseId) + '</div></div>';
+  list.insertBefore(el, list.firstChild);
+}
+
+function doAction(action) {
+  if (action === "endCall") {
+    closeFlow();
+  } else if (action === "exitDone") {
+    closeFlow();
+  }
+}
+
+function closeFlow() {
+  clearTimeout(stageTimer);
+  clearInterval(progressTimer);
+  clearFeed();
+  $("flowMask").classList.remove("show");
+  $("feed").style.display = "none";
+  flowState = null;
+}
+
+/* ============================================================
+   Emergency picker / Exit checklist
+   ============================================================ */
+function openEmergencyPicker() { $("emergMask").classList.add("show"); }
+function closeEmergency()      { $("emergMask").classList.remove("show"); }
+
+function confirmExit() { $("mask").classList.add("show"); }
+function closeChecklist() { $("mask").classList.remove("show"); }
+function proceedExit() {
+  closeChecklist();
+  startFlow("exit_unlock");
+}
+
+/* ============================================================
+   Cross-page sync
+   ============================================================ */
+function handleBus(msg) {
+  if (!msg || msg.type !== "state_update" || !msg.state) return;
+  if ((msg.ts || 0) <= lastBusTs) return;
+  if (msg.src === "cabin") return;
+  lastBusTs = msg.ts || Date.now();
+  const key = msg.state.causeType || "reset";
+  if (SCENARIOS[key] && key !== currentScenario) applyScenario(key);
+}
+if (bc) bc.onmessage = (e) => handleBus(e.data || {});
+setInterval(() => {
+  try { const raw = localStorage.getItem(BK); if (raw) handleBus(JSON.parse(raw)); } catch(e){}
+}, 800);
+
+/* Clock */
+function tick() {
+  const d = new Date();
+  $("clock").textContent = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+}
+setInterval(tick, 1000); tick();
+
+applyScenario("reset");
+
+window.addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    if ($("mask").classList.contains("show")) closeChecklist();
+    else if ($("emergMask").classList.contains("show")) closeEmergency();
+    else if ($("flowMask").classList.contains("show")) closeFlow();
+  }
+});
+</script>
+</body>
+</html>
